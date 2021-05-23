@@ -8,8 +8,8 @@ void Engine::go()
 {
   SetTraceLogLevel(LOG_DEBUG);
   sol::state lua;
-  lua.open_libraries(sol::lib::base, sol::lib::package);
-  if (!load(lua))
+  initLua(lua);
+  if (!bind(lua) && !load(lua))
     loop(lua);
 }
 
@@ -59,7 +59,12 @@ bool Engine::call(sol::state& lua, const char* fn_name)
   return false;
 }
 
-bool Engine::load(sol::state& lua)
+void Engine::initLua(sol::state& lua)
+{
+  lua.open_libraries(sol::lib::base, sol::lib::package);
+}
+
+bool Engine::bind(sol::state &lua)
 {
   bind_ecs(lua);
   bind_graphics(lua);
@@ -78,6 +83,11 @@ bool Engine::load(sol::state& lua)
   lua.set_function("background", &background, this);
   Engine::game.background = black;
 
+  return false;
+}
+
+bool Engine::load(sol::state& lua)
+{
   // load main.lua
   auto r = lua.safe_script_file("main.lua", sol::script_pass_on_error);
   if (error(r)) return true;

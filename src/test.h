@@ -47,10 +47,15 @@
 
 #include "engine.h"
 
-static void runLua(const char* script, const char* file, int line)
+static void useLua(sol::state& lua)
 {
-  sol::state l;
-  l.open_libraries();
+  Engine e = Engine();
+  e.initLua(lua);
+  e.bind(lua);
+}
+
+static void runLua(sol::state& l, const char* script, const char* file, int line)
+{
   auto result = l.safe_script(script, sol::script_pass_on_error);
   if (!result.valid())
   {
@@ -59,6 +64,6 @@ static void runLua(const char* script, const char* file, int line)
   }
 }
 
-#define CHECK_LUA(s) runLua(s, __FILE__, __LINE__)
+#define CHECK_LUA(lua, s) runLua(lua, s, __FILE__, __LINE__)
 
 #endif

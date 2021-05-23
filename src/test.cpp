@@ -5,31 +5,25 @@
 
 TEST_CASE("Color")
 {
-  // Engine e = Engine();
-  Color c_rgb = rgb(0.1, 0.2, 0.3);
-  Color c_rgba = rgb(0.1, 0.2, 0.3, 0.4);
+  sol::state lua;
+  useLua(lua);
 
-  SUBCASE("rgb / rgba")
+  SUBCASE("rgb(a)")
   {
-    // init
-    CHECK( c_rgba.r == (int)(0.1 * 255) );
-    CHECK( c_rgba.g == (int)(0.2 * 255) );
-    CHECK( c_rgba.b == (int)(0.3 * 255) );
-
-    CHECK( c_rgba.r == (int)(0.1 * 255) );
-    CHECK( c_rgba.g == (int)(0.2 * 255) );
-    CHECK( c_rgba.b == (int)(0.3 * 255) );
-    CHECK( c_rgba.a == (int)(0.4 * 255) );
-
-    CHECK_LUA(R"(
-      c_rgb = rgb(0.1, 0.2, 0.3);
-      c_rgba = rgb(0.1, 0.2, 0.3, 0.4);
-
-      assert(c_rgb == c_rgba);
+    CHECK_LUA(lua, R"(
+      c_rgb = rgb(10, 20, 30)
+      c_rgba = rgb(10, 20, 30, 40)
     )");
 
-    // equality
-    Color c_rgba2 = rgb(0.1, 0.2, 0.3, 0.4);
-    CHECK( c_rgba == c_rgba2 );
+    CHECK_LUA(lua, R"(
+      assert(c_rgb.r == 10, "red value")
+      assert(c_rgb.g == 20, "green value")
+      assert(c_rgb.b == 30, "blue value")
+      assert(c_rgb.a == 40, "alpha value")
+
+      c_rgb.a = 40
+      assert(c_rgb == c_rgba, "equality")
+    )");
+
   }
 }

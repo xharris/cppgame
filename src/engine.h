@@ -38,10 +38,13 @@ class Engine {
   static struct GameSetting game;
   static struct WindowSetting window;
   static GraphicsStack graphics;
-  void go();
-  void background(Color c);
   static bool error(std::initializer_list<const char *>);
   static bool error(sol::protected_function_result &r);
+
+  void go();
+  void background(Color c);
+  void initLua(sol::state&);
+  bool bind(sol::state&);
 
   private:
   bool fnExists(sol::state&, const char*);

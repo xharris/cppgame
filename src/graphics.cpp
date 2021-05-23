@@ -28,13 +28,13 @@ void GraphicsStack::reset()
   current = &stack.top();
 }
 
-Color rgb(float r, float g, float b)
+Color rgb(int r, int g, int b)
 {
-  return ColorFromNormalized(Vector4{r, g, b, 1.0});
+  return Color{(uchar)r, (uchar)g, (uchar)b, (uchar)255};
 }
-Color rgb(float r, float g, float b, float a) 
+Color rgb(int r, int g, int b, int a) 
 { 
-  return ColorFromNormalized(Vector4{r, g, b, a});
+  return Color{(uchar)r, (uchar)g, (uchar)b, (uchar)a};
 }
 Color hsv(float h, float s, float v)
 {
@@ -167,8 +167,8 @@ void bind_graphics(sol::state& lua)
   lua["blank"] = blank;
 
   lua.set_function("rgb", sol::overload(
-    sol::resolve<Color(float,float,float)>(rgb),
-    sol::resolve<Color(float,float,float,float)>(rgb)
+    sol::resolve<Color(int,int,int)>(rgb),
+    sol::resolve<Color(int,int,int,int)>(rgb)
   ));
   lua.set_function("hsv", sol::overload(
     sol::resolve<Color(float,float,float)>(hsv),
