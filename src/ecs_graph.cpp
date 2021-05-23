@@ -3,14 +3,26 @@
 int Prop::count = 0;
 sigmap Prop::signatures;
 umap<propid, umap<nodeid, Prop>> Prop::props;
-umap<nodeid, Node> Node::nodes;
 std::vector<System> System::systems;
 
-Prop::Prop(propid k, sol::object v, nodeid id) {
+Prop::Prop(propid k, sol::object v, nodeid id) 
+{
   value = v;
   signature = Prop::getSignature(k);
   id = id;
-  props[k][id] = *this;
+  props[k].emplace(id, *this);
+}
+
+void Prop::set(propid k, sol::object v, Node& node)
+{
+  if (node.has(k))
+  {
+    props[k][node.id].value = v;
+  }
+  else 
+  {
+    Prop(k, v, node.id);
+  }
 }
 
 propsig Prop::getSignature(propid key)
@@ -31,59 +43,43 @@ propsig Prop::getSignature(propid key)
 
 Node::Node(sol::table props)
 {
-  Node node;
-  TraceLog(LOG_DEBUG, "here we are");
-  node.x = props['x'].get_or(0);
-  node.y = props['y'].get_or(0);
-  node.ox = props["ox"].get_or(0);
-  node.oy = props["oy"].get_or(0);
-  node.sx = props["sx"].get_or(1);
-  node.sy = props["sy"].get_or(1);
-  node.r = props['r'].get_or(0);
-  node.kx = props["kx"].get_or(0);
-  node.ky = props["ky"].get_or(0);
+  id = uuid::generate();
+  x = props['x'].get_or(0);
+  y = props['y'].get_or(0);
+  ox = props["ox"].get_or(0);
+  oy = props["oy"].get_or(0);
+  sx = props["sx"].get_or(1);
+  sy = props["sy"].get_or(1);
+  r = props['r'].get_or(0);
+  kx = props["kx"].get_or(0);
+  ky = props["ky"].get_or(0);
 
   // iterate components
   for (const auto& kv : props)
   {
     const char* key = kv.first.as<const char*>(); 
-    TraceLog(LOG_DEBUG, "add property", key);
-    node.set(key, kv.second.as<sol::object>());
+    set(key, kv.second.as<sol::object>());
   }
-}
-
-Node Node::create()
-{
-  nodeid id = uuid::generate();
-  nodes[id] = Node();
-  nodes[id].id = id;
-  return nodes[id];
-}
-
-Node Node::from_table(sol::table props)
-{
-  nodeid id = uuid::generate();
-  nodes[id] = Node(props);
-  nodes[id].id = id;
-  return nodes[id];
 }
 
 bool Node::isPermanentProp(const char* key)
 {
   const char not_props1[3] = {'x','y','r'};
   const char *not_props2[7] = {"ox", "oy", "sx", "sy", "kx", "ky", "id"};
-  bool permanent = false;
-  for (int p = 0; p < 3; p++)
+  if (strlen(key) == 1)
   {
-    if (not_props1[p] == key[0])
-      permanent = true;
+    for (int p = 0; p < 3; p++)
+    {
+      if (not_props1[p] == key[0])
+        return true;
+    }
   }
   for (int p = 0; p < 7; p++)
   {
-    if (strcmp(not_props2[p], key))
-      permanent = true;
+    if (strcmp(not_props2[p], key) == 0)
+      return true;
   }
-  return permanent;
+  return false;
 }
 
 sol::object Node::get(sol::stack_object key, sol::this_state state)
@@ -93,7 +89,6 @@ sol::object Node::get(sol::stack_object key, sol::this_state state)
   { 
     return sol::object(state, sol::in_place, Prop::props[property_id][id].value);
   }
-  // TODO: how to return default property (x, y, etc..)?
   return sol::object(state, sol::in_place, sol::nil);
 }
 
@@ -111,11 +106,13 @@ void Node::set(propid key, sol::object val)
     if (val != sol::nil)
     {
       signature |= property_signature;
-      Prop(key, val, id);
+      Prop::set(key, val, *this);
     }
     // remove from signature
     else 
+    {
       signature &= ~property_signature;
+    }
     System::checkAll(*this);
   }
 }
@@ -123,6 +120,20 @@ void Node::set(propid key, sol::object val)
 bool Node::has(propid key)
 {
   return Prop::props.find(key) != Prop::props.end() && Prop::props[key].find(id) != Prop::props[key].end();
+}
+
+Node& Node::add(Node& node)
+{
+  int _id = id;
+  auto it = std::find_if(children.begin(), children.end(), [&_id](const std::reference_wrapper<Node> &other){
+    return _id == other.get().id;
+  });
+  if (it == children.end())
+  {
+    children.push_back(std::ref(node));
+    TraceLog(LOG_DEBUG, "add %d to %d", node.id, _id);
+  }
+  return *this;
 }
 
 System::System(sol::table t)
@@ -171,16 +182,19 @@ void System::checkAll(Node& node)
 void bind_ecs(sol::state& lua)
 {
   sol::usertype<Node> node_type = lua.new_usertype<Node>("node",
-    sol::call_constructor, // sol::constructors<Node(), Node(sol::table)>(),
-    sol::factories(
-      &Node::create,
-      &Node::from_table
-    ),
+    sol::call_constructor, sol::constructors<Node(), Node(sol::table)>(),
     sol::meta_function::index, &Node::get,
     sol::meta_function::new_index, sol::resolve<void(sol::stack_object, sol::stack_object, sol::this_state)>(&Node::set),
+    // sol::meta_function::equal_to, [](const Node& lhs, const Node& rhs) { return lhs == rhs; },
     "id", sol::readonly(&Node::id),
     "x", &Node::x, "y", &Node::y, "ox", &Node::ox, "oy", &Node::oy,
-    "sx", &Node::sx, "sy", &Node::sy, "r", &Node::r, "kx", &Node::kx, "ky", &Node::ky
+    "sx", &Node::sx, "sy", &Node::sy, "r", &Node::r, "kx", &Node::kx, "ky", &Node::ky,
+    "add", [](Node& self, sol::variadic_args va) {
+      for (auto v : va) {
+        Node node = v;
+        self.add(node);
+      }
+    }
   );
 
   sol::usertype<System> sys_type = lua.new_usertype<System>("system",

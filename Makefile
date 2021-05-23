@@ -8,7 +8,7 @@
 NOTMAIN = engine.cpp graphics.cpp window.cpp ecs_graph.cpp
 NOTMAIN := $(addprefix src/,$(NOTMAIN))
 OBJS = src/main.cpp $(NOTMAIN)
-OBJS_TEST = src/test.cpp # $(NOTMAIN)
+OBJS_TEST = src/test.cpp $(NOTMAIN)
 OUT = game.exe
 OUT_TEST = test.exe
 
@@ -37,7 +37,8 @@ LINK += -llua54
 INCLUDE += -I./libs/sol2
 
 # TESTING
-INCLUDE += -I./libs/doctest # catch2
+# INCLUDE += -I./libs/catch2
+INCLUDE += -I./libs/doctest
 
 # SOLE (uuids)
 # INCLUDE += -I./libs/sole-1.0.1

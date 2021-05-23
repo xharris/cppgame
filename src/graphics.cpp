@@ -28,10 +28,27 @@ void GraphicsStack::reset()
   current = &stack.top();
 }
 
-Color color(int r, int g, int b, int a) { return (Color){(uchar)r, (uchar)g, (uchar)b, (uchar)a}; }
-Color color(float h, float s, float v) { return ColorFromHSV(h,s,v); }
-Color color(int hex) { return GetColor(hex); }
-Color color(const char* hex) { return white; }
+Color rgb(float r, float g, float b)
+{
+  return ColorFromNormalized(Vector4{r, g, b, 1.0});
+}
+Color rgb(float r, float g, float b, float a) 
+{ 
+  return ColorFromNormalized(Vector4{r, g, b, a});
+}
+Color hsv(float h, float s, float v)
+{
+  return ColorFromHSV(h,s,v); 
+}
+Color hsv(float h, float s, float v, float a) 
+{  
+  return ColorAlpha(ColorFromHSV(h,s,v), a);
+}
+Color hex(int _hex) 
+{ 
+  return GetColor(_hex); 
+}
+// Color color(const char* hex) { return white; }
 
 void fill() { Engine::graphics.current->fill = blank; }
 void fill(Color c) { Engine::graphics.current->fill = c; }
@@ -149,12 +166,16 @@ void bind_graphics(sol::state& lua)
   lua["black"] = black;
   lua["blank"] = blank;
 
-  lua.set_function("color", sol::overload(
-    sol::resolve<Color(int,int,int,int)>(color),
-    sol::resolve<Color(float,float,float)>(color),
-    sol::resolve<Color(int)>(color),
-    sol::resolve<Color(const char*)>(color)
+  lua.set_function("rgb", sol::overload(
+    sol::resolve<Color(float,float,float)>(rgb),
+    sol::resolve<Color(float,float,float,float)>(rgb)
   ));
+  lua.set_function("hsv", sol::overload(
+    sol::resolve<Color(float,float,float)>(hsv),
+    sol::resolve<Color(float,float,float,float)>(hsv)
+  ));
+  lua.set_function("hex", hex);
+  
   lua.set_function("fill", sol::overload(
     sol::resolve<void()>(fill),
     sol::resolve<void(Color)>(fill)

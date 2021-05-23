@@ -73,10 +73,12 @@ inline std::ostream& operator<<(std::ostream& os, const Color& c)
     (int)c.a << "}";
 }
 
-Color color(int r, int g, int b, int a);
-Color color(float h, float s, float v);
-Color color(int hex);
-Color color(const char* hex);
+Color rgb(float r, float g, float b);
+Color rgb(float r, float g, float b, float a);
+Color hsv(float h, float s, float v);
+Color hsv(float h, float s, float v, float a);
+Color hex(int hex);
+// Color hex(const char* hex);
 Color alpha(Color c, float alpha);
 Color fade(Color c, float alpha);
 

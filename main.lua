@@ -3,7 +3,7 @@ background(white)
 
 local img_ball, spr_robot
 
-function load()
+function notsetup()
   img_ball = image("res/ball.png")
   image("res/bluerobot.png")
     :sprite("robot_walk", {'1-8'}, 33, 33) -- , offx, offy)
@@ -31,12 +31,15 @@ end
 
 solar_system    = node()
 sun             = node{x=game.width/2, y=game.height/2, radius=100}
-earth_orbit     = node{x=100, orbit=0.1}
+earth_orbit     = node{x=100, spin=0.1}
 earth           = node{radius=50}
-moon_orbit      = node{x=20, orbit=0.1}
+moon_orbit      = node{x=20, spin=0.1}
 moon            = node{radius=25}
 
-print(sun, sun.id, sun.x, earth_orbit.orbit)
+sun.x = 20
+sun.radius = 200
+print("sun", sun.id, sun.x, sun.radius)
+print("earth_orbit", earth_orbit.id, earth_orbit.spin)
 
 -- system{
 --   "orbit", 
@@ -53,17 +56,15 @@ print(sun, sun.id, sun.x, earth_orbit.orbit)
 --   end
 -- }
 
---[[
-solar_system.add(
+solar_system:add(
   sun,
-  earth_orbit.add(
+  earth_orbit:add(
     earth,
-    moon_orbit.add(
+    moon_orbit:add(
       moon
     )
   )
 )
-]]
 
 -- solar_system + {
 --   sun,

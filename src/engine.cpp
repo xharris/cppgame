@@ -6,6 +6,7 @@ GraphicsStack Engine::graphics = GraphicsStack();
 
 void Engine::go()
 {
+  SetTraceLogLevel(LOG_DEBUG);
   sol::state lua;
   lua.open_libraries(sol::lib::base, sol::lib::package);
   if (!load(lua))
@@ -40,9 +41,15 @@ bool Engine::error(std::initializer_list<const char *> error)
   return true;
 }
 
+bool Engine::fnExists(sol::state& lua, const char* fn_name)
+{
+  sol::object fn = lua[fn_name];
+  return fn.get_type() == sol::type::function;
+}
+
 bool Engine::call(sol::state& lua, const char* fn_name)
 {
-  std::cout << "calling " << fn_name << std::endl;
+  TraceLog(LOG_INFO, "calling %s", fn_name);
   sol::function fn = lua[fn_name];
   if (fn.valid())
   {
@@ -75,14 +82,16 @@ bool Engine::load(sol::state& lua)
   auto r = lua.safe_script_file("main.lua", sol::script_pass_on_error);
   if (error(r)) return true;
 
-  if (call(lua, "setup")) return true;
+  if (fnExists(lua, "setup"))
+  {
+    TraceLog(LOG_DEBUG, "continuing");
+    InitWindow(
+      Engine::window.width, Engine::window.height, 
+      Engine::window.title
+    );
 
-  InitWindow(
-    Engine::window.width, Engine::window.height, 
-    Engine::window.title
-  );
-
-  if (call(lua, "load")) return true;
+    if (call(lua, "setup")) return true;
+  }
   return false;
 }
 

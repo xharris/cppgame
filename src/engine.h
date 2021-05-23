@@ -44,6 +44,7 @@ class Engine {
   static bool error(sol::protected_function_result &r);
 
   private:
+  bool fnExists(sol::state&, const char*);
   bool call(sol::state&, const char*);
   bool load(sol::state&);
   void loop(sol::state&);
