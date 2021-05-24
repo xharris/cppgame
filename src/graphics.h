@@ -11,12 +11,14 @@
 
 typedef unsigned char uchar;
 
-#define NUM_COLORS 3 // not including white/black
-#define NUM_SHADES 6 // including color50
 
 #define white       Color{255,255,255,255}
 #define black       Color{0,0,0,255}
 #define blank       Color{0,0,0,0}
+
+#define COLOR_STRINGS {"grey", "green", "blue"}
+#define NUM_COLORS 3 // not including white/black
+#define NUM_SHADES 6 // including color50
 
 #define grey50      Color{245,245,245,255}
 #define grey100     Color{238,238,238,255}

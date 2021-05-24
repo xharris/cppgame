@@ -42,16 +42,20 @@
 #define NODEFERWINDOWPOS // DeferWindowPos routines
 #define NOMCX // Modem Configuration Extensions
 
+// #define CATCH_CONFIG_MAIN
+// #include <catch.hpp>
+
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
 #include "engine.h"
 
-static void useLua(sol::state& lua)
+static Engine useLua(sol::state& lua)
 {
   Engine e = Engine();
   e.initLua(lua);
   e.bind(lua);
+  return e;
 }
 
 static void runLua(sol::state& l, const char* script, const char* file, int line)

@@ -44,9 +44,24 @@ Color hsv(float h, float s, float v, float a)
 {  
   return ColorAlpha(ColorFromHSV(h,s,v), a);
 }
-Color hex(int _hex) 
+Color hex(int h) 
 { 
-  return GetColor(_hex); 
+  // reformat hex value
+  Color c{0,0,0,0};
+  if (h == 0x0)
+    return c;
+  bool is_short = !(h >> 8 > 0x0);
+  bool has_alpha = h >> 24 > 0x0;
+  if (is_short)
+    h = (h << 24) | 0x000000FF;
+  else if (!has_alpha)
+    h = (h << 8) | 0x000000FF;
+  // convert to rgba
+  c.r = (h >> 24) & 0xFF;
+  c.g = (h >> 16) & 0xFF;
+  c.b = (h >> 8) & 0xFF;
+  c.a = h & 0xFF;
+  return c;
 }
 // Color color(const char* hex) { return white; }
 
@@ -144,9 +159,7 @@ void bind_graphics(sol::state& lua)
     blue50, blue100, blue200, blue300, blue400, blue500
   };
 
-  const char *color_names[] = {
-    "grey", "green", "blue"
-  };
+  const char *color_names[] = COLOR_STRINGS;
 
   std::string str_color;
   for (int c = 0; c < NUM_COLORS; c++) // lol!
