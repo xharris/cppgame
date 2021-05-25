@@ -8,11 +8,13 @@
 NOTMAIN = engine.cpp graphics.cpp window.cpp ecs_graph.cpp
 NOTMAIN := $(addprefix src/,$(NOTMAIN))
 OBJS = src/main.cpp $(NOTMAIN)
-OBJS_TEST = src/test.cpp $(NOTMAIN)
+OBJS_TEST = tests/test.cpp $(NOTMAIN)
 OUT = game.exe
 OUT_TEST = test.exe
 
 CC = g++
+
+INCLUDE += -I./src
 
 # SDL
 # SDL_ARCH = x86_64-w64-mingw32
@@ -24,9 +26,9 @@ CC = g++
 
 # RAYLIB
 RAYLIB_ARCH =	raylib-3.7.0_win64_mingw-w64
-INCLUDE =	-I./libs/$(RAYLIB_ARCH)/include
-LIB = -L./libs/$(RAYLIB_ARCH)/lib
-LINK = -lraylib -lopengl32 -lgdi32 -lwinmm
+INCLUDE +=	-I./libs/$(RAYLIB_ARCH)/include
+LIB += -L./libs/$(RAYLIB_ARCH)/lib
+LINK += -lraylib -lopengl32 -lgdi32 -lwinmm
 
 # LUA
 INCLUDE += -I./libs/lua-5.4/include
@@ -61,7 +63,7 @@ test: $(OBJS_TEST)
 run:
 	$(OUT)
 
-clean: $(OUT)
+clean: $(OUT) $(OUT_TEST)
 	$(RM) $(OUT)
 	$(RM) $(OUT_TEST)
 

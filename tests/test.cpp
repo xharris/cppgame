@@ -50,11 +50,42 @@ TEST_CASE("Graphics")
   {
     CHECK_LUA(lua, R"(
       c_rgb = rgb(10, 20, 30)
+      fill(c_rgb)
+      stroke(c_rgb)
     )");
     Color c_rgb = lua["c_rgb"];
-    CHECK_LUA(lua, R"(
-      fill(c_rgb)
-    )");
     CHECK( Engine::graphics.current->fill == c_rgb );
+    CHECK( Engine::graphics.current->stroke == c_rgb );
   }
+}
+
+TEST_CASE("ECS & Scene Graph")
+{
+  sol::state lua;
+  Engine e = useLua(lua);
+  
+  CHECK_LUA(lua, R"(
+    solar_system    = node()
+    sun             = node{x=game.width/2, y=game.height/2, radius=100}
+    earth_orbit     = node{x=100, spin=0.1}
+    earth           = node{radius=50}
+    moon_orbit      = node{x=20, spin=0.1}
+    moon            = node{radius=25}
+  )");
+
+  SUBCASE("Node get/set")
+  {
+    CHECK_LUA(lua, R"(
+      sun.x = 20 
+      sun.radius = 200
+      sun.extra_info = { glow=true }
+
+      assert(sun.radius == 200, "component added on init")
+      assert(sun.extra_info ~= nil and sun.extra_info.glow == true, "component added post-init")
+    )");
+    Node sun = lua["sun"];
+    CHECK( sun.x == 20 );
+  }
+
+
 }

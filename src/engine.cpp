@@ -80,7 +80,7 @@ bool Engine::bind(sol::state &lua)
   lua["game"] = &Engine::game;
   SetTargetFPS(game.fps);
 
-  lua.set_function("background", &background, this);
+  lua.set_function("background", &Engine::background, this);
   Engine::game.background = black;
 
   return false;

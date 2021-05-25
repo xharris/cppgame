@@ -140,9 +140,9 @@ BImage* BImage::sprite(const char * name, sol::table frames, int framew, int fra
 
 void bind_graphics(sol::state& lua)
 {
-  lua.set_function("push", &Engine::graphics.push, &Engine::graphics);
-  lua.set_function("pop", &Engine::graphics.pop, &Engine::graphics);
-  lua.set_function("reset", &Engine::graphics.reset, &Engine::graphics);
+  lua.set_function("push", &GraphicsStack::push, &Engine::graphics);
+  lua.set_function("pop", &GraphicsStack::pop, &Engine::graphics);
+  lua.set_function("reset", &GraphicsStack::reset, &Engine::graphics);
 
   // color
 
