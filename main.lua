@@ -3,7 +3,7 @@ background(white)
 
 local img_ball, spr_robot
 
-function notsetup()
+function setup()
   img_ball = image("res/ball.png")
   image("res/bluerobot.png")
     :sprite("robot_walk", {'1-8'}, 33, 33) -- , offx, offy)
