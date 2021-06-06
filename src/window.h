@@ -2,7 +2,9 @@
 #define WINDOW_H
 
 #include <iostream>
-#include "engine.h"
+
+#include "sol.h"
+#include "raylib.hpp"
 
 void window(sol::table w);
 

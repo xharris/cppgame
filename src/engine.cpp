@@ -73,7 +73,8 @@ bool Engine::bind(sol::state &lua)
   lua.new_usertype<GameSetting>("GameSetting",
     "fps", sol::readonly(&GameSetting::fps),
     "width", sol::readonly(&GameSetting::width),
-    "height", sol::readonly(&GameSetting::height)
+    "height", sol::readonly(&GameSetting::height),
+    "scene", sol::readonly(&GameSetting::root_node)
   );
   
   lua["window"] = &Engine::window;
@@ -94,7 +95,6 @@ bool Engine::load(sol::state& lua)
 
   if (fnExists(lua, "setup"))
   {
-    TraceLog(LOG_DEBUG, "continuing");
     InitWindow(
       Engine::window.width, Engine::window.height, 
       Engine::window.title

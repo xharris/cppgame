@@ -9,46 +9,44 @@ TEST_CASE("Graphics")
 
   SUBCASE("Color")
   {
-    CHECK_LUA(lua, R"(
+    RUN_LUA(lua, R"(
       c_rgb = rgb(10, 20, 30)
       c_rgba = rgb(10, 20, 30, 40)
-      c_hsv = hsv(210, .667, .118)
-
-      c_hex = hex(0x0a141e)
+      
+      -- equivalent to c_rgb
+      c_hsv = hsv(210, .667, .118)  
+      c_hex = hex(0x0a141e)      
     )");
 
     SUBCASE("rgb(a)")
     {
-      CHECK_LUA(lua, R"(
-        assert(c_rgb.r == 10, "red value")
-        assert(c_rgb.g == 20, "green value")
-        assert(c_rgb.b == 30, "blue value")
-        assert(c_rgb.a == 255, "alpha value")
-        assert(c_rgba.a == 40, "non-default alpha value")
+      Color c_rgb = lua["c_rgb"];
+      Color c_rgba = lua["c_rgba"];
+      CHECK(c_rgb.r == 10);
+      CHECK(c_rgb.g == 20);
+      CHECK(c_rgb.b == 30);
+      CHECK(c_rgb.a == 255);
+      CHECK(c_rgba.a == 40);
 
-        c_rgb.a = 40
-        assert(c_rgb == c_rgba, "rgb-rgb equality")
-      )");
+      RUN_LUA(lua, "c_rgb.a = 40");
+      c_rgb = lua["c_rgb"];
+      CHECK(c_rgb == c_rgba);
     }
 
     SUBCASE("hsv")
     {
-      CHECK_LUA(lua, R"(
-        assert(c_rgb == c_hsv, "rgb-hsv equality")
-      )");
+      CHECK((Color)lua["c_rgb"] == (Color)lua["c_hsv"]);
     }
 
     SUBCASE("hex")
     {
-      CHECK_LUA(lua, R"(
-        assert(c_rgb == c_hex, "rgb-hex equality")
-      )");
+      CHECK((Color)lua["c_rgb"] == (Color)lua["c_hex"]);
     }
   }
 
   SUBCASE("Settings")
   {
-    CHECK_LUA(lua, R"(
+    RUN_LUA(lua, R"(
       c_rgb = rgb(10, 20, 30)
       fill(c_rgb)
       stroke(c_rgb)
@@ -64,7 +62,7 @@ TEST_CASE("ECS & Scene Graph")
   sol::state lua;
   Engine e = useLua(lua);
   
-  CHECK_LUA(lua, R"(
+  RUN_LUA(lua, R"(
     solar_system    = node()
     sun             = node{x=game.width/2, y=game.height/2, radius=100}
     earth_orbit     = node{x=100, spin=0.1}
@@ -75,7 +73,7 @@ TEST_CASE("ECS & Scene Graph")
 
   SUBCASE("Node get/set")
   {
-    CHECK_LUA(lua, R"(
+    RUN_LUA(lua, R"(
       sun.x = 20 
       sun.radius = 200
       sun.extra_info = { glow=true }
@@ -84,8 +82,51 @@ TEST_CASE("ECS & Scene Graph")
       assert(sun.extra_info ~= nil and sun.extra_info.glow == true, "component added post-init")
     )");
     Node sun = lua["sun"];
+    int radius = lua["sun"]["radius"];
+    sol::table extra_info = lua["sun"]["extra_info"];
+    CHECK( radius == 200 );
+    CHECK( extra_info["glow"] == true );
     CHECK( sun.x == 20 );
+
   }
 
+  SUBCASE("children using add()")
+  {
+    RUN_LUA(lua, R"(
+      game.scene:add(
+        solar_system:add(
+          sun,
+          earth_orbit:add(
+            earth,
+            moon_orbit:add(
+              moon
+            )
+          )
+        )
+      )
+    )");
+  }
 
+  SUBCASE("children using +")
+  {
+    RUN_LUA(lua, R"(
+      game.scene:add(
+        solar_system + {
+          sun,
+          earth_orbit + {
+            earth,
+            moon_orbit +
+              moon
+          }
+        }
+      )
+    )");
+  }
+
+  SUBCASE("clear children")
+  {
+    // CHECK_LUA(lua, R"(
+
+    // )");
+  }
 }

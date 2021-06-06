@@ -45,17 +45,8 @@ endmacro()
 
 # raylib
 find_package(raylib REQUIRED)
-
 # lua 
-# set(LUA_INCLUDE_DIR "${LIBS_DIR}/lua-5.4")
-# set(LUA_LIBRARY "${LIBS_DIR}/lua-5.4")
-# find_package(Lua 5.4 REQUIRED
-#   HINTS "${LIBS_DIR}/lua-5.4"
-# ) 
 add_subdirectory(external/lua)
-# include_directories(${LUA_INCLUDE_DIR})
-
-# message("including ${LUA_INCLUDE_DIR}")
 # sol2
 find_package(sol2 REQUIRED)
 # doctest
@@ -66,12 +57,6 @@ link_directories(${EXTERNAL_INSTALL_LOCATION}/lib)
 
 set(LIBS lua::lib sol2::sol2 raylib)
 set(TESTING_LIB doctest)
-
-if(LUA_FOUND)
-  # message("linking lua ${LUA_LIBRARY}")
-  # set(LIBS ${LUA_LIBRARY} ${LIBS})
-  # set(MOVE_DLLS ${MOVE_DLLS} ${LUA_LIBRARIES}/lua54.dll)
-endif()
 
 # output dirs
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

@@ -16,9 +16,9 @@ Configure and generate build system:
 
 # Run
 
-`cmake --build .\build; .\build\bin\cpp_game.exe`
+`cmake --build .\build --target cpp_game; .\build\bin\cpp_game.exe`
 * Windows: you may need to run powershell/cmd as admin
 
 # Test 
 
-`cmake --build .\build; .\build\bin\cpp_game_test.exe`
+`cmake --build .\build --target cpp_game_test; .\build\bin\cpp_game_test.exe`

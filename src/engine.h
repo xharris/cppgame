@@ -1,11 +1,10 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-#define SOL_ALL_SAFETIES_ON 1
-#include "sol/sol.hpp"
 #include <initializer_list>
 #include <sstream>
 
+#include "sol.h"
 #include "raylib.hpp"
 #include "uuid.h"
 #include "graphics.h"
@@ -14,6 +13,10 @@
 
 struct GameSetting
 {
+  GameSetting() : root_node() {};
+
+  Node root_node;
+
   Color background;
   int fps = 60;
   int width = 800;

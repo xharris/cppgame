@@ -45,6 +45,7 @@
 // #define CATCH_CONFIG_MAIN
 // #include <catch.hpp>
 
+#include <string.h>
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest/doctest.h"
 #include "engine.h"
@@ -67,6 +68,17 @@ static void runLua(sol::state& l, const char* script, const char* file, int line
   }
 }
 
-#define CHECK_LUA(lua, s) runLua(lua, s, __FILE__, __LINE__)
+static void checkLua(sol::state& l, const char* assertion, const char* file, int line)
+{
+  auto result = l.safe_script("assert("+std::string(assertion)+R"())", sol::script_pass_on_error);
+  if (!result.valid())
+  {
+    sol::error err = result;
+    ADD_FAIL_AT(file, line, err.what());
+  }
+}
+
+#define RUN_LUA(lua, s) runLua(lua, s, __FILE__, __LINE__)
+#define CHECK_LUA(lua, assertion) checkLua(lua, assertion, __FILE__, __LINE__)
 
 #endif

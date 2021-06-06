@@ -7,7 +7,9 @@
 #include <functional>
 #include <stdarg.h>
 
-#include "engine.h"
+#include "sol.h"
+#include "uuid.h"
+#include "raylib.hpp"
 
 typedef const char* propid;
 typedef uint64_t propsig;
@@ -37,37 +39,45 @@ class Prop {
 
 class Node {
   public:
+  Node() : x(10), y(0), ox(0), oy(0), sx(1), sy(1), r(0), kx(0), ky(0) {
+    id = uuid::generate();
+  };
+  Node(sol::table);
+  // props
   std::vector<std::reference_wrapper<Node>> children;
   float x, y, ox, oy, sx, sy, r, kx, ky;
   nodeid id;
   propsig signature;
-  Node() : x(10), y(0), ox(0), oy(0), sx(1), sy(1), r(0), kx(0), ky(0) {
-    id = uuid::generate();
-  };
-  // bool operator ==(const Node &b) const { return b.id == id; };
-  Node(sol::table);
+  // methods
   void remove(propid);
   sol::object get(sol::stack_object, sol::this_state);
   void set(sol::stack_object, sol::stack_object, sol::this_state);
   void set(propid, sol::object);
   bool has(propid);
   Node& add(Node&);
+  Node& add(const Node& n) { return add(const_cast<Node&>(n)); }; // const_cast<Node&>(const_cast<const Node*>(this)->add(n)); };
+  Node& add(sol::table);
 
   private:
+  // PROPS
   struct Matrix transform;
+  // METHODS
   bool isPermanentProp(const char*);
 };
 
 class System {
   public:
   static std::vector<System> systems;
+  // check if node belongs/doesn't belong in any systems
+  static void checkAll(Node&);
+
+  System() {};
   System(sol::table);
+  // PROPS
   propsig signature;
   umap<const char*, sol::function> callbacks;
   // nodes that fulfill prop requirement
   std::vector<nodeid> nodes;
-  // check if node belongs/doesn't belong in all systems
-  static void checkAll(Node&);
 
   private:
   void add(Node);

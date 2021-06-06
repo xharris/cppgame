@@ -136,6 +136,18 @@ Node& Node::add(Node& node)
   return *this;
 }
 
+Node& Node::add(sol::table node_list)
+{
+  for (const auto& kv : node_list)
+  {
+    if (kv.second.is<Node>())
+    {
+      add(kv.second.as<Node>());
+    }
+  }
+  return *this;
+}
+
 System::System(sol::table t)
 {
   signature = 0;
@@ -181,10 +193,15 @@ void System::checkAll(Node& node)
 
 void bind_ecs(sol::state& lua)
 {
-  sol::usertype<Node> node_type = lua.new_usertype<Node>("node",
+  sol::usertype<Node> node_type = lua.new_usertype<Node>("Node",
     sol::call_constructor, sol::constructors<Node(), Node(sol::table)>(),
     sol::meta_function::index, &Node::get,
     sol::meta_function::new_index, sol::resolve<void(sol::stack_object, sol::stack_object, sol::this_state)>(&Node::set),
+    sol::meta_function::addition, sol::overload(
+      sol::resolve<Node&(Node&)>(&Node::add),
+      sol::resolve<Node&(const Node&)>(&Node::add),
+      sol::resolve<Node&(sol::table)>(&Node::add)
+    ),
     // sol::meta_function::equal_to, [](const Node& lhs, const Node& rhs) { return lhs == rhs; },
     "id", sol::readonly(&Node::id),
     "x", &Node::x, "y", &Node::y, "ox", &Node::ox, "oy", &Node::oy,
@@ -197,10 +214,11 @@ void bind_ecs(sol::state& lua)
     }
   );
 
-  sol::usertype<System> sys_type = lua.new_usertype<System>("system",
-    sol::call_constructor,
-    sol::factories(
-      [](sol::table t){ return System(t); }
-    )
-  );
+  lua.set_function("System", [](sol::table t){ return System(t); });
+  // sol::usertype<System> sys_type = lua.new_usertype<System>("System",
+  //   sol::call_constructor, sol::constructors<System(sol::table)>()
+  //   // sol::factories(
+  //   //   [](sol::table t){ return System(t); }
+  //   // )
+  // );
 }

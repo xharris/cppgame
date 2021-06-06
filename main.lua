@@ -29,49 +29,41 @@ end
 
 -- x, y, sx, sy, r, kx, ky, z
 
-solar_system    = node()
-sun             = node{x=game.width/2, y=game.height/2, radius=100}
-earth_orbit     = node{x=100, spin=0.1}
-earth           = node{radius=50}
-moon_orbit      = node{x=20, spin=0.1}
-moon            = node{radius=25}
+solar_system    = Node()
+sun             = Node{x=game.width/2, y=game.height/2, radius=100}
+earth_orbit     = Node{x=100, spin=0.1}
+earth           = Node{radius=50}
+moon_orbit      = Node{x=20, spin=0.1}
+moon            = Node{radius=25}
 
 sun.x = 20
 sun.radius = 200
 print("sun", sun.id, sun.x, sun.radius)
 print("earth_orbit", earth_orbit.id, earth_orbit.spin)
 
--- system{
+-- system{q
 --   "orbit", 
 --   process = function(e, dt)
 --     e.r = e.r + math.rad(e.orbit) * dt
 --   end
 -- }
 
--- system{
---   "radius",
---   draw = function(e)
---     fill(e.color or orange)
---     circle(e.x, e.y, e.radius)
---   end
--- }
+System{
+  props = {"radius"},
+  draw = function(e)
+    fill(e.color or orange)
+    circle(e.x, e.y, e.radius)
+  end
+}
 
-solar_system:add(
-  sun,
-  earth_orbit:add(
-    earth,
-    moon_orbit:add(
-      moon
-    )
-  )
+game.scene:add( 
+  solar_system + {
+    sun,
+    earth_orbit + {
+      earth,
+      moon_orbit +
+        moon
+    }
+  }
 )
-
--- solar_system + {
---   sun,
---   earth_orbit + {
---     earth,
---     moon_orbit +
---       moon
---   }
--- }
 

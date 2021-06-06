@@ -2,7 +2,7 @@
 
 GraphicsStack::GraphicsStack()
 {
-  stack.push(GraphicsState{white, white});
+  stack.push(GraphicsState());
   current = &stack.top();
 }
 GraphicsStack::~GraphicsStack()
@@ -88,6 +88,13 @@ void font(sol::table f)
   Engine::game.font_size = f["size"].get_or(Engine::game.font_size);
   Engine::game.font_spacing = f["spacing"].get_or(Engine::game.font_spacing);
   Engine::game.font_wrap = f["wrap"].get_or(Engine::game.font_wrap);
+}
+
+void circle(int x, int y, float r)
+{
+  DrawCircle(x, y, r, Engine::graphics.current->fill);
+  if (Engine::graphics.current->stroke != blank) 
+    DrawCircleLines(x, y, r, Engine::graphics.current->stroke);
 }
 
 BImage::BImage(const char* filename)
@@ -205,8 +212,11 @@ void bind_graphics(sol::state& lua)
     sol::resolve<void(const char*, int, int)>(text), 
     sol::resolve<void(const char*, float, float, float, float)>(text)
   ));
-
   lua.set_function("font", font);
+
+  // primitives
+
+  lua.set_function("circle", circle);
 
   // image 
 

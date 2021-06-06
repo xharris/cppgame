@@ -7,6 +7,9 @@
 #include <unordered_map>
 #include <vector>
 #include <variant>
+
+#include "sol.h"
+#include "raylib.hpp"
 #include "engine.h"
 
 typedef unsigned char uchar;
@@ -42,6 +45,11 @@ typedef unsigned char uchar;
 #define blue500     Color{33,150,243,255}
 
 struct GraphicsState {
+  GraphicsState() {
+    fill = white;
+    stroke = blank;
+  };
+
   Color fill;
   Color stroke;
 };
@@ -61,9 +69,14 @@ class GraphicsStack {
 
 // color 
 
-inline bool operator == (const Color& lhs, const Color& rhs)
+inline bool operator ==(const Color& lhs, const Color& rhs)
 {
   return std::tie(lhs.r,lhs.g,lhs.b,lhs.a) == std::tie(rhs.r,rhs.g,rhs.b,rhs.a);
+}
+
+inline bool operator !=(const Color& lhs, const Color& rhs)
+{
+  return std::tie(lhs.r,lhs.g,lhs.b,lhs.a) != std::tie(rhs.r,rhs.g,rhs.b,rhs.a);
 }
 
 inline std::ostream& operator<<(std::ostream& os, const Color& c)
@@ -96,6 +109,10 @@ void text(const char *text, int x, int y);
 void text(const char *text, int x, int y, int w, int h);
 
 void font(sol::table f);
+
+// primitives
+
+void circle(int x, int y, float r);
 
 // image
 
