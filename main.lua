@@ -32,16 +32,16 @@ end
 solar_system    = Node()
 sun             = Node{x=game.width/2, y=game.height/2, radius=100}
 earth_orbit     = Node{x=100, spin=0.1}
-earth           = Node{radius=50}
+earth           = Node{radius=50, color=blue}
 moon_orbit      = Node{x=20, spin=0.1}
-moon            = Node{radius=25}
+moon            = Node{radius=25, color=white}
 
 sun.x = 20
 sun.radius = 200
 print("sun", sun.id, sun.x, sun.radius)
 print("earth_orbit", earth_orbit.id, earth_orbit.spin)
 
--- system{q
+-- system{
 --   "orbit", 
 --   process = function(e, dt)
 --     e.r = e.r + math.rad(e.orbit) * dt
@@ -49,10 +49,17 @@ print("earth_orbit", earth_orbit.id, earth_orbit.spin)
 -- }
 
 System{
-  props = {"radius"},
+  "radius",
   draw = function(e)
     fill(e.color or orange)
     circle(e.x, e.y, e.radius)
+  end
+}
+
+System{
+  "spin",
+  update = function(e, dt)
+    e.r = e.r + math.rad(5) * dt
   end
 }
 

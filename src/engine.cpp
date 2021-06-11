@@ -117,6 +117,8 @@ void Engine::loop(sol::state& lua)
     {
       auto ru = fn_update(GetFrameTime());
       error(ru);
+      // update ecs systems
+      // System::updateAll();
     }
 
     // fixed timestep (physac automatically does this)

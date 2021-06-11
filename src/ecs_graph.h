@@ -1,11 +1,13 @@
 #ifndef ECS_GRAPH_H
 #define ECS_GRAPH_H
 
+#include <list>
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
 #include <functional>
 #include <stdarg.h>
+#include <string.h>
 
 #include "sol.h"
 #include "uuid.h"
@@ -39,9 +41,9 @@ class Prop {
 
 class Node {
   public:
-  Node() : x(10), y(0), ox(0), oy(0), sx(1), sy(1), r(0), kx(0), ky(0) {
-    id = uuid::generate();
-  };
+  static umap<nodeid, std::shared_ptr<Node>> nodes;
+
+  Node();
   Node(sol::table);
   // props
   std::vector<std::reference_wrapper<Node>> children;
@@ -70,6 +72,9 @@ class System {
   static std::vector<System> systems;
   // check if node belongs/doesn't belong in any systems
   static void checkAll(Node&);
+  static void updateAll();
+  static void drawAll();
+  static System create(sol::table t) { return System(t); };
 
   System() {};
   System(sol::table);
@@ -80,7 +85,6 @@ class System {
   std::vector<nodeid> nodes;
 
   private:
-  void add(Node);
   // check if node belongs in this system
   bool check(Node&);
 };

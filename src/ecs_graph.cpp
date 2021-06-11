@@ -4,6 +4,7 @@ int Prop::count = 0;
 sigmap Prop::signatures;
 umap<propid, umap<nodeid, Prop>> Prop::props;
 std::vector<System> System::systems;
+umap<nodeid, std::shared_ptr<Node>> Node::nodes;
 
 Prop::Prop(propid k, sol::object v, nodeid id) 
 {
@@ -32,13 +33,21 @@ propsig Prop::getSignature(propid key)
   if (it != Prop::signatures.end())
   {
     signature = it->second;
-    Prop::count++;
   }
+  // first time using prop, create a new signature for it
   else
   {
     signature = 1 << Prop::count;
+    TraceLog(LOG_INFO, "Prop(key=%s, signature=%llu)", key, signature);
+    Prop::signatures.emplace(key, signature);
+    Prop::count++;
   }
   return signature;
+}
+
+Node::Node() : x(10), y(0), ox(0), oy(0), sx(1), sy(1), r(0), kx(0), ky(0), signature(0) {
+  id = uuid::generate();
+  TraceLog(LOG_INFO, "Node(id=%d)", id);
 }
 
 Node::Node(sol::table props)
@@ -53,6 +62,7 @@ Node::Node(sol::table props)
   r = props['r'].get_or(0);
   kx = props["kx"].get_or(0);
   ky = props["ky"].get_or(0);
+  signature = 0;
 
   // iterate components
   for (const auto& kv : props)
@@ -60,6 +70,7 @@ Node::Node(sol::table props)
     const char* key = kv.first.as<const char*>(); 
     set(key, kv.second.as<sol::object>());
   }
+  TraceLog(LOG_INFO, "Node(id=%d, signature=%llu)", id, signature);
 }
 
 bool Node::isPermanentProp(const char* key)
@@ -153,20 +164,34 @@ System::System(sol::table t)
   signature = 0;
   const char *sys_callbacks[] = {"create", "draw", "update", "destroy"};
   int len_callbacks = *(&sys_callbacks + 1) - sys_callbacks;
+  
   for (const auto& kv : t)
   {
-    // a system callback?
-    for (int c = 0; c < len_callbacks; c++)
-    {
-      if (strcmp(kv.first.as<const char*>(), sys_callbacks[c]))
-        callbacks.emplace(sys_callbacks[c], kv.second.as<sol::function>());
-    }
     // a property?
-    if (kv.second.is<const char*>())
+    if (kv.first.is<int>() && kv.second.is<const char*>())
     {
       signature |= Prop::getSignature(kv.second.as<const char*>());
     }
+    // a system callback?
+    else if (kv.first.is<const char*>() && kv.second.is<sol::function>())
+    {
+      for (int c = 0; c < len_callbacks; c++)
+      {
+        if (strcmp(kv.first.as<const char*>(), sys_callbacks[c]))
+          callbacks.emplace(sys_callbacks[c], kv.second.as<sol::function>());
+      }
+    }
   }
+
+  // check ALL nodes 
+  for (auto const& p : Node::nodes)
+  {
+    check(*p.second);
+  }
+
+  std::ostringstream o;
+  o << signature;
+  TraceLog(LOG_INFO, "System(signature=%llu, nodes=%d)", signature, nodes.size());
 }
 
 bool System::check(Node& node)
@@ -191,10 +216,31 @@ void System::checkAll(Node& node)
   }
 }
 
+void System::updateAll()
+{
+  
+}
+
+void System::drawAll()
+{
+  
+}
+
 void bind_ecs(sol::state& lua)
 {
   sol::usertype<Node> node_type = lua.new_usertype<Node>("Node",
-    sol::call_constructor, sol::constructors<Node(), Node(sol::table)>(),
+    sol::call_constructor, sol::factories(
+      []() -> std::shared_ptr<Node> {
+        auto node = std::make_shared<Node>();
+        Node::nodes.emplace((*node).id, node);
+        return node;
+      },
+      [](sol::table t) -> std::shared_ptr<Node> {
+        auto node = std::make_shared<Node>(t);
+        Node::nodes.emplace((*node).id, node);
+        return node;
+      }
+    ),
     sol::meta_function::index, &Node::get,
     sol::meta_function::new_index, sol::resolve<void(sol::stack_object, sol::stack_object, sol::this_state)>(&Node::set),
     sol::meta_function::addition, sol::overload(
@@ -214,11 +260,7 @@ void bind_ecs(sol::state& lua)
     }
   );
 
-  lua.set_function("System", [](sol::table t){ return System(t); });
-  // sol::usertype<System> sys_type = lua.new_usertype<System>("System",
-  //   sol::call_constructor, sol::constructors<System(sol::table)>()
-  //   // sol::factories(
-  //   //   [](sol::table t){ return System(t); }
-  //   // )
-  // );
+  sol::usertype<System> sys_type = lua.new_usertype<System>("System",
+    sol::call_constructor, sol::constructors<System(), System(sol::table)>()
+  );
 }
