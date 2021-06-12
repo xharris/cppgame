@@ -10,10 +10,10 @@
 
 #include "sol.h"
 #include "raylib.hpp"
+#include "error.h"
 #include "engine.h"
 
 typedef unsigned char uchar;
-
 
 #define white       Color{255,255,255,255}
 #define black       Color{0,0,0,255}

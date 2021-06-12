@@ -195,8 +195,10 @@ System::System(sol::table t)
     {
       for (int c = 0; c < len_callbacks; c++)
       {
-        if (strcmp(kv.first.as<const char*>(), sys_callbacks[c]))
+        if (!strcmp(kv.first.as<const char*>(), sys_callbacks[c]))
+        {
           callbacks.emplace(sys_callbacks[c], kv.second.as<sol::function>());
+        }
       }
     }
   }
@@ -210,6 +212,11 @@ System::System(sol::table t)
   std::ostringstream o;
   o << signature;
   TraceLog(LOG_INFO, "System(signature=%s, nodes=%d)", btos(signature), nodes.size());
+}
+
+bool System::hasCallback(const char* callback)
+{
+  return callbacks.count(callback) > 0;
 }
 
 int System::check(Node& node)
@@ -258,14 +265,38 @@ void System::checkAll(Node& node)
   if (removes > 0) TraceLog(LOG_INFO, "Node(id=%d) removed from %d system%c", node.id, removes, removes > 1 ? 's' : ' ');
 }
 
-void System::updateAll()
+void System::updateAll(float dt)
 {
-  
+  for (sptr<System> sys : systems)
+  {
+    if (sys->hasCallback("update"))
+    {
+      sol::function fn = sys->callbacks["update"];
+      // iterate nodes in system
+      for (nodeid n : sys->nodes)
+      {
+        auto rs = fn(Node::nodes[n], dt);
+        Error::check(rs);
+      }
+    }
+  }
 }
 
 void System::drawAll()
 {
-  
+  for (sptr<System> sys : systems)
+  {
+    if (sys->hasCallback("draw"))
+    {
+      sol::function fn = sys->callbacks["draw"];
+      // iterate nodes in system
+      for (nodeid n : sys->nodes)
+      {
+        auto rs = fn(Node::nodes[n]);
+        Error::check(rs);
+      }
+    }
+  }
 }
 
 void bind_ecs(sol::state& lua)

@@ -100,7 +100,7 @@ void circle(int x, int y, float r)
 BImage::BImage(const char* filename)
 {
   if (!FileExists(filename))
-    Engine::error({"Image not found: ", filename});
+    Error::throws({"Image not found: ", filename});
   else 
   {
     image = LoadImage(filename);

@@ -12,7 +12,7 @@ function setup()
   -- spr_robot = sprite("robot_walk")
 end
 
-function draw()
+function draw(d)
   font{size=20}
   push() 
     fill(blue)
@@ -25,6 +25,8 @@ function draw()
 
   img_ball()
   -- spr_robot()
+
+  d()
 end
 
 -- x, y, sx, sy, r, kx, ky, z

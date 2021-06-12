@@ -12,6 +12,7 @@
 #include "sol.h"
 #include "uuid.h"
 #include "raylib.hpp"
+#include "error.h"
 
 typedef const char* propid;
 typedef uint64_t propsig;
@@ -79,7 +80,7 @@ class System {
   static std::vector<sptr<System>> systems;
   // check if node belongs/doesn't belong in any systems
   static void checkAll(Node&);
-  static void updateAll();
+  static void updateAll(float);
   static void drawAll();
   static System create(sol::table t) { return System(t); };
 
@@ -100,6 +101,7 @@ class System {
   private:
   // check if node belongs in this system
   int check(Node&);
+  bool hasCallback(const char*);
 };
 
 #endif 

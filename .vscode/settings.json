@@ -62,7 +62,8 @@
     "mutex": "cpp",
     "thread": "cpp",
     "variant": "cpp",
-    "csignal": "cpp"
+    "csignal": "cpp",
+    "cerrno": "cpp"
   },
   "cmake.configureOnOpen": true
 }

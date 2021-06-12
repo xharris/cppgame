@@ -13,34 +13,6 @@ void Engine::go()
     loop(lua);
 }
 
-bool Engine::error(sol::protected_function_result &r)
-{
-  if (!r.valid())
-  {
-    sol::error err = r;
-    // std::cerr << "Error: " << err.what() << std::endl;
-    TraceLog(LOG_ERROR, err.what());
-
-    // TODO: add custom user error-handling
-    CloseWindow();
-
-    return true;
-  }
-  return false;
-}
-
-bool Engine::error(std::initializer_list<const char *> error)
-{
-  std::ostringstream os_error;
-  for (auto err : error)
-  {
-    os_error << err;
-  }
-
-  TraceLog(LOG_ERROR, os_error.str().c_str());
-  return true;
-}
-
 bool Engine::fnExists(sol::state& lua, const char* fn_name)
 {
   sol::object fn = lua[fn_name];
@@ -54,7 +26,7 @@ bool Engine::call(sol::state& lua, const char* fn_name)
   if (fn.valid())
   {
     auto rs = fn();
-    if (error(rs)) return true;
+    if (Error::check(rs)) return true;
   }
   return false;
 }
@@ -91,7 +63,7 @@ bool Engine::load(sol::state& lua)
 {
   // load main.lua
   auto r = lua.safe_script_file("main.lua", sol::script_pass_on_error);
-  if (error(r)) return true;
+  if (Error::check(r)) return true;
 
   if (fnExists(lua, "setup"))
   {
@@ -109,6 +81,7 @@ void Engine::loop(sol::state& lua)
 {
   sol::function fn_update = lua["update"];
   sol::function fn_draw = lua["draw"];
+  // sol::function fn_system_draw = sol::as_function(&System::drawAll);
   
   while (!WindowShouldClose())
   {
@@ -116,9 +89,9 @@ void Engine::loop(sol::state& lua)
     if (fn_update.valid())
     {
       auto ru = fn_update(GetFrameTime());
-      error(ru);
+      Error::check(ru);
       // update ecs systems
-      // System::updateAll();
+      System::updateAll(GetFrameTime());
     }
 
     // fixed timestep (physac automatically does this)
@@ -128,9 +101,13 @@ void Engine::loop(sol::state& lua)
     {
       BeginDrawing();
       ClearBackground(Engine::game.background);
-      auto rd = fn_draw();
-      error(rd);
+      auto rd = fn_draw(sol::as_function(&System::drawAll));
+      Error::check(rd);
       EndDrawing();
+    }
+    else
+    {
+      System::drawAll();
     }
   }
 

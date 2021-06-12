@@ -10,6 +10,7 @@
 #include "graphics.h"
 #include "window.h"
 #include "ecs_graph.h"
+#include "error.h"
 
 struct GameSetting
 {
@@ -41,8 +42,6 @@ class Engine {
   static struct GameSetting game;
   static struct WindowSetting window;
   static GraphicsStack graphics;
-  static bool error(std::initializer_list<const char *>);
-  static bool error(sol::protected_function_result &r);
 
   void go();
   void background(Color c);
