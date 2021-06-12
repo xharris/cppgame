@@ -18,6 +18,8 @@ typedef uint64_t propsig;
 typedef uuid::uuid nodeid;
 template <typename K,typename V> 
 using umap = std::unordered_map<K,V>;
+template <typename T>
+using sptr = std::shared_ptr<T>;
 typedef umap<propid, propsig> sigmap;
 
 void bind_ecs(sol::state& lua);
@@ -31,6 +33,7 @@ class Prop {
   static umap<propid, umap<nodeid, Prop>> props;
   static propsig getSignature(propid);
   static void set(propid, sol::object, Node&);
+  static void destroy(propid, Node&);
 
   Prop() {};
   Prop(propid, sol::object, nodeid);
@@ -41,7 +44,7 @@ class Prop {
 
 class Node {
   public:
-  static umap<nodeid, std::shared_ptr<Node>> nodes;
+  static umap<nodeid, sptr<Node>> nodes;
 
   Node();
   Node(sol::table);
@@ -61,15 +64,19 @@ class Node {
   Node& add(sol::table);
 
   private:
+
   // PROPS
+
   struct Matrix transform;
+
   // METHODS
+
   bool isPermanentProp(const char*);
 };
 
 class System {
   public:
-  static std::vector<System> systems;
+  static std::vector<sptr<System>> systems;
   // check if node belongs/doesn't belong in any systems
   static void checkAll(Node&);
   static void updateAll();
@@ -78,15 +85,21 @@ class System {
 
   System() {};
   System(sol::table);
+
   // PROPS
+
   propsig signature;
   umap<const char*, sol::function> callbacks;
   // nodes that fulfill prop requirement
   std::vector<nodeid> nodes;
 
+  // METHODS
+
+  bool contains(Node& node);
+
   private:
   // check if node belongs in this system
-  bool check(Node&);
+  int check(Node&);
 };
 
 #endif 

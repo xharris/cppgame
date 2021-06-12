@@ -1,10 +1,18 @@
 #include "ecs_graph.h"
 
+#include <bitset>
+
+const char* btos(propsig &sig)
+{
+  std::bitset<6> b(sig);
+  return b.to_string().c_str();
+}
+
 int Prop::count = 0;
 sigmap Prop::signatures;
 umap<propid, umap<nodeid, Prop>> Prop::props;
-std::vector<System> System::systems;
-umap<nodeid, std::shared_ptr<Node>> Node::nodes;
+std::vector<sptr<System>> System::systems;
+umap<nodeid, sptr<Node>> Node::nodes;
 
 Prop::Prop(propid k, sol::object v, nodeid id) 
 {
@@ -26,9 +34,17 @@ void Prop::set(propid k, sol::object v, Node& node)
   }
 }
 
+void Prop::destroy(propid k, Node& node)
+{
+  if (node.has(k))
+  {
+    props[k].erase(node.id);
+  }
+}
+
 propsig Prop::getSignature(propid key)
 {
-  propsig signature;
+  propsig signature = 0;
   sigmap::iterator it = Prop::signatures.find(key);
   if (it != Prop::signatures.end())
   {
@@ -38,7 +54,7 @@ propsig Prop::getSignature(propid key)
   else
   {
     signature = 1 << Prop::count;
-    TraceLog(LOG_INFO, "Prop(key=%s, signature=%llu)", key, signature);
+    // TraceLog(LOG_INFO, "Prop(key=%s, signature=%s)", key, btos(signature));
     Prop::signatures.emplace(key, signature);
     Prop::count++;
   }
@@ -70,7 +86,7 @@ Node::Node(sol::table props)
     const char* key = kv.first.as<const char*>(); 
     set(key, kv.second.as<sol::object>());
   }
-  TraceLog(LOG_INFO, "Node(id=%d, signature=%llu)", id, signature);
+  TraceLog(LOG_INFO, "Node(id=%d, signature=%s)", id, btos(signature));
 }
 
 bool Node::isPermanentProp(const char* key)
@@ -123,6 +139,8 @@ void Node::set(propid key, sol::object val)
     else 
     {
       signature &= ~property_signature;
+      TraceLog(LOG_DEBUG, "new signature Node(id=%d, sig=%s)", id, btos(signature));
+      Prop::destroy(key, *this);
     }
     System::checkAll(*this);
   }
@@ -191,29 +209,53 @@ System::System(sol::table t)
 
   std::ostringstream o;
   o << signature;
-  TraceLog(LOG_INFO, "System(signature=%llu, nodes=%d)", signature, nodes.size());
+  TraceLog(LOG_INFO, "System(signature=%s, nodes=%d)", btos(signature), nodes.size());
 }
 
-bool System::check(Node& node)
+int System::check(Node& node)
 {
-  bool belongs = (bool)(signature & node.signature);
-  auto found = std::find(nodes.begin(), nodes.end(), node.id);
-  // add node to system
-  if (belongs && found == nodes.end())
-    nodes.push_back(node.id);
-  // remove node from system
-  if (!belongs && found != nodes.end())
-    nodes.erase(found);
+  bool belongs = (bool)((signature & node.signature) == signature);
+  auto it = std::find(nodes.begin(), nodes.end(), node.id);
+  bool found = it != nodes.end();
 
-  return belongs; 
+  // TraceLog(LOG_DEBUG, "Checking node(id=%d,%s)", node.id, btos(node.signature));
+  // TraceLog(LOG_DEBUG, "with system(%s)", btos(signature));
+  // TraceLog(LOG_DEBUG, "belongs:%d, found:%d", belongs, found);
+
+  // add node to system
+  if (belongs && !found)
+  {
+    TraceLog(LOG_DEBUG, "add");
+    nodes.push_back(node.id);
+    return 1;
+  }
+  // remove node from system
+  if (!belongs && found)
+  {
+    TraceLog(LOG_DEBUG, "remove");
+    nodes.erase(it);
+    return -1;
+  }
+  return 0;
+}
+
+bool System::contains(Node& node)
+{
+  return std::find(nodes.begin(), nodes.end(), node.id) != nodes.end();
 }
 
 void System::checkAll(Node& node)
 {
-  for (System sys : systems)
+  int adds = 0, removes = 0, status = 0;
+  for (sptr<System> sys : systems)
   {
-    sys.check(node);
+    status = sys->check(node);
+    if (status == 1) adds++;
+    if (status == -1) removes++;
   }
+
+  if (adds > 0) TraceLog(LOG_INFO, "Node(id=%d) added to %d system%c", node.id, adds, adds > 1 ? 's' : ' ');
+  if (removes > 0) TraceLog(LOG_INFO, "Node(id=%d) removed from %d system%c", node.id, removes, removes > 1 ? 's' : ' ');
 }
 
 void System::updateAll()
@@ -230,12 +272,12 @@ void bind_ecs(sol::state& lua)
 {
   sol::usertype<Node> node_type = lua.new_usertype<Node>("Node",
     sol::call_constructor, sol::factories(
-      []() -> std::shared_ptr<Node> {
+      []() -> sptr<Node> {
         auto node = std::make_shared<Node>();
         Node::nodes.emplace((*node).id, node);
         return node;
       },
-      [](sol::table t) -> std::shared_ptr<Node> {
+      [](sol::table t) -> sptr<Node> {
         auto node = std::make_shared<Node>(t);
         Node::nodes.emplace((*node).id, node);
         return node;
@@ -261,6 +303,18 @@ void bind_ecs(sol::state& lua)
   );
 
   sol::usertype<System> sys_type = lua.new_usertype<System>("System",
-    sol::call_constructor, sol::constructors<System(), System(sol::table)>()
+    sol::call_constructor, sol::factories(
+      []() -> sptr<System> {
+        auto sys = std::make_shared<System>();
+        System::systems.push_back(sys);
+        return sys;
+      },
+      [](sol::table t) -> sptr<System> {
+        auto sys = std::make_shared<System>(t);
+        System::systems.push_back(sys);
+        return sys;
+      }
+    ),
+    "contains", &System::contains
   );
 }
