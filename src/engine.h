@@ -14,10 +14,6 @@
 
 struct GameSetting
 {
-  GameSetting() : root_node() {};
-
-  Node root_node;
-
   Color background;
   int fps = 60;
   int width = 800;
@@ -43,8 +39,9 @@ class Engine {
   static struct WindowSetting window;
   static GraphicsStack graphics;
 
+  // METHODS
+
   void go();
-  void background(Color c);
   void initLua(sol::state&);
   bool bind(sol::state&);
 

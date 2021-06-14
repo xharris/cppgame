@@ -1,76 +1,42 @@
 window{title="test"}
 background(white)
 
-local img_ball, spr_robot
+print(background())
 
-function setup()
-  img_ball = image("res/ball.png")
-  image("res/bluerobot.png")
-    :sprite("robot_walk", {'1-8'}, 33, 33) -- , offx, offy)
-    :sprite("robot_stand", {1}, 33, 33)
+function setup()  
+  solar_system    = Entity()
+  sun             = Entity{
+    Transform = {x=game.width/2, y=game.height/2}, 
+    Planet = { radius = 100, color = blue }
+  }
+  -- earth_orbit     = Entity{x=100, spin=0.1}
+  -- earth           = Entity{radius=50, color=blue, jim=20}
+  -- moon_orbit      = Entity{x=20, spin=0.1}
+  -- moon            = Entity{radius=25, color=white}
 
-  -- spr_robot = sprite("robot_walk")
+  -- game.scene:add( 
+  --   solar_system + {
+  --     sun,
+  --     earth_orbit + {
+  --       earth,
+  --       moon_orbit +
+  --         moon
+  --     }
+  --   }
+  -- )
 end
-
-function draw(d)
-  font{size=20}
-  push() 
-    fill(blue)
-    push()
-      fill(green)
-      text("text(str) "..game.fps)
-    pop()
-    text("text(str,x,y)", 190, 200)
-  pop()
-
-  img_ball()
-  -- spr_robot()
-
-  d()
-end
-
--- x, y, sx, sy, r, kx, ky, z
-
-solar_system    = Node()
-sun             = Node{x=game.width/2, y=game.height/2, radius=100}
--- earth_orbit     = Node{x=100, spin=0.1}
--- earth           = Node{radius=50, color=blue, jim=20}
--- moon_orbit      = Node{x=20, spin=0.1}
--- moon            = Node{radius=25, color=white}
-
--- system{
---   "orbit", 
---   process = function(e, dt)
---     e.r = e.r + math.rad(e.orbit) * dt
---   end
--- }
 
 System{
-  "radius", "color",
+  "Transform", "Planet",
   draw = function(e)
-    fill(e.color)
-    circle(e.x, e.y, e.radius)
+    local t, planet = e.Transform, e.Planet
+    fill(planet.color)
+    circle(t.x, t.y, planet.radius)
+  end,
+  update = function(e, dt)
+    local t = e.Transform
+    t.x = t.x + 5 * dt
   end
 }
 
--- sun.radius = nil
-sun.color = blue
-
--- System{
---   "spin",
---   update = function(e, dt)
---     e.r = e.r + math.rad(5) * dt
---   end
--- }
-
--- game.scene:add( 
---   solar_system + {
---     sun,
---     earth_orbit + {
---       earth,
---       moon_orbit +
---         moon
---     }
---   }
--- )
 

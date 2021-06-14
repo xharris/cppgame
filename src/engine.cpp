@@ -45,15 +45,17 @@ bool Engine::bind(sol::state &lua)
   lua.new_usertype<GameSetting>("GameSetting",
     "fps", sol::readonly(&GameSetting::fps),
     "width", sol::readonly(&GameSetting::width),
-    "height", sol::readonly(&GameSetting::height),
-    "scene", sol::readonly(&GameSetting::root_node)
+    "height", sol::readonly(&GameSetting::height)
   );
   
   lua["window"] = &Engine::window;
   lua["game"] = &Engine::game;
   SetTargetFPS(game.fps);
-
-  lua.set_function("background", &Engine::background, this);
+  
+  lua.set_function("background", sol::overload(
+    [&](Color c) { this->game.background = c; },
+    [&]() -> Color { return this->game.background; }
+  ));
   Engine::game.background = black;
 
   return false;
@@ -90,28 +92,23 @@ void Engine::loop(sol::state& lua)
     {
       auto ru = fn_update(GetFrameTime());
       Error::check(ru);
-      // update ecs systems
-      System::updateAll(GetFrameTime());
     }
+    // update ecs systems
+    System::updateAll(GetFrameTime());
 
     // fixed timestep (physac automatically does this)
     // ...
 
+    BeginDrawing();
+    ClearBackground(Engine::game.background);
     if (fn_draw.valid())
     {
-      BeginDrawing();
-      ClearBackground(Engine::game.background);
-      auto rd = fn_draw(sol::as_function(&System::drawAll));
+      auto rd = fn_draw();
       Error::check(rd);
-      EndDrawing();
     }
-    else
-    {
-      System::drawAll();
-    }
+    System::drawAll();
+    EndDrawing();
   }
 
   CloseWindow();
 }
-
-void Engine::background(Color c) { Engine::game.background = c; }

@@ -13,6 +13,7 @@ sigmap Prop::signatures;
 umap<propid, umap<nodeid, Prop>> Prop::props;
 std::vector<sptr<System>> System::systems;
 umap<nodeid, sptr<Node>> Node::nodes;
+Node Node::root;
 
 Prop::Prop(propid k, sol::object v, nodeid id) 
 {
@@ -61,24 +62,19 @@ propsig Prop::getSignature(propid key)
   return signature;
 }
 
-Node::Node() : x(10), y(0), ox(0), oy(0), sx(1), sy(1), r(0), kx(0), ky(0), signature(0) {
+Node::Node() : signature(0), z(0), last_z(0), needs_sorting(false) {
   id = uuid::generate();
+  root.add(*this);
   TraceLog(LOG_INFO, "Node(id=%d)", id);
 }
 
 Node::Node(sol::table props)
 {
   id = uuid::generate();
-  x = props['x'].get_or(0);
-  y = props['y'].get_or(0);
-  ox = props["ox"].get_or(0);
-  oy = props["oy"].get_or(0);
-  sx = props["sx"].get_or(1);
-  sy = props["sy"].get_or(1);
-  r = props['r'].get_or(0);
-  kx = props["kx"].get_or(0);
-  ky = props["ky"].get_or(0);
   signature = 0;
+  z = 0;
+  last_z = 0;
+  needs_sorting = false;
 
   // iterate components
   for (const auto& kv : props)
@@ -86,6 +82,7 @@ Node::Node(sol::table props)
     const char* key = kv.first.as<const char*>(); 
     set(key, kv.second.as<sol::object>());
   }
+  root.add(*this);
   TraceLog(LOG_INFO, "Node(id=%d, signature=%s)", id, btos(signature));
 }
 
@@ -151,16 +148,27 @@ bool Node::has(propid key)
   return Prop::props.find(key) != Prop::props.end() && Prop::props[key].find(id) != Prop::props[key].end();
 }
 
-Node& Node::add(Node& node)
+bool Node::has(Node& node)
 {
   int _id = id;
   auto it = std::find_if(children.begin(), children.end(), [&_id](const std::reference_wrapper<Node> &other){
     return _id == other.get().id;
   });
-  if (it == children.end())
+  return it != children.end();
+}
+
+Node& Node::add(Node& node)
+{
+  if (&node != this && !has(node))
   {
     children.push_back(std::ref(node));
-    TraceLog(LOG_DEBUG, "add %d to %d", node.id, _id);
+    needs_sorting = true;
+    last_z = z;
+    // remove from last parent
+    if (node.parent != NULL)
+      node.parent->removeChild(node);
+    node.parent = this;
+    TraceLog(LOG_DEBUG, "add %d to %d", node.id, id);
   }
   return *this;
 }
@@ -177,8 +185,79 @@ Node& Node::add(sol::table node_list)
   return *this;
 }
 
+void Node::removeChild(Node& node)
+{
+  auto rem = std::remove_if(children.begin(), children.end(),
+    [&node](std::reference_wrapper<Node>& n) { return n.get().id == node.id; });
+  children.erase(rem, children.end());
+}
+
+void Node::removeChild(sol::table node_list)
+{
+  for (const auto& kv : node_list)
+  {
+    if (kv.second.is<Node>())
+    {
+      removeChild(kv.second.as<Node>());
+    }
+  }
+}
+
+void Node::clearRenderers()
+{
+  renderers.clear();
+}
+
+void Node::addRenderer(System& sys)
+{
+  if (sys.hasCallback("draw"))
+  {
+    renderers.push_back(
+      std::make_tuple(sys.signature, sys.order, sys.callbacks["draw"])
+    );
+    std::sort(renderers.begin(), renderers.end(), 
+      [](const std::tuple<propsig, int, sol::function> &a,
+         const std::tuple<propsig, int, sol::function> &b)
+         -> bool { return std::get<1>(a) < std::get<1>(b); });
+  }
+}
+
+void Node::removeRenderer(System& sys)
+{
+  auto rem = std::remove_if(renderers.begin(), renderers.end(),
+    [sys](auto const x) { return std::get<0>(x) == sys.signature; });
+  renderers.erase(rem, renderers.end());
+}
+
+void Node::draw()
+{
+  // do the child nodes need to be sorted?
+  if (needs_sorting)
+  {
+    std::sort(children.begin(), children.end(),
+      [](std::reference_wrapper<Node>& a, std::reference_wrapper<Node>& b)
+      -> bool { return a.get().z < b.get().z; } );
+    needs_sorting = false;
+  }
+  // draw this node
+  for (auto& rend : renderers)
+  {
+    std::get<2>(rend)(*this);
+  }
+  // iterate child nodes
+  for (std::reference_wrapper<Node>& child : children)
+  {
+    Node child_node = child.get();
+    child_node.draw(); // SEGFAULT
+  }
+}
+
+System::System() : order(0), signature(0)
+{}
+
 System::System(sol::table t)
 {
+  order = 0;
   signature = 0;
   const char *sys_callbacks[] = {"create", "draw", "update", "destroy"};
   int len_callbacks = *(&sys_callbacks + 1) - sys_callbacks;
@@ -212,6 +291,10 @@ System::System(sol::table t)
   std::ostringstream o;
   o << signature;
   TraceLog(LOG_INFO, "System(signature=%s, nodes=%d)", btos(signature), nodes.size());
+  for (const auto& kv : callbacks)
+  {
+    TraceLog(LOG_INFO, "\thas %s", kv.first);
+  }
 }
 
 bool System::hasCallback(const char* callback)
@@ -232,15 +315,15 @@ int System::check(Node& node)
   // add node to system
   if (belongs && !found)
   {
-    TraceLog(LOG_DEBUG, "add");
     nodes.push_back(node.id);
+    node.addRenderer(*this);
     return 1;
   }
   // remove node from system
   if (!belongs && found)
   {
-    TraceLog(LOG_DEBUG, "remove");
     nodes.erase(it);
+    node.removeRenderer(*this);
     return -1;
   }
   return 0;
@@ -284,24 +367,12 @@ void System::updateAll(float dt)
 
 void System::drawAll()
 {
-  for (sptr<System> sys : systems)
-  {
-    if (sys->hasCallback("draw"))
-    {
-      sol::function fn = sys->callbacks["draw"];
-      // iterate nodes in system
-      for (nodeid n : sys->nodes)
-      {
-        auto rs = fn(Node::nodes[n]);
-        Error::check(rs);
-      }
-    }
-  }
+  Node::root.draw();
 }
 
 void bind_ecs(sol::state& lua)
 {
-  sol::usertype<Node> node_type = lua.new_usertype<Node>("Node",
+  sol::usertype<Node> node_type = lua.new_usertype<Node>("Entity",
     sol::call_constructor, sol::factories(
       []() -> sptr<Node> {
         auto node = std::make_shared<Node>();
@@ -323,8 +394,6 @@ void bind_ecs(sol::state& lua)
     ),
     // sol::meta_function::equal_to, [](const Node& lhs, const Node& rhs) { return lhs == rhs; },
     "id", sol::readonly(&Node::id),
-    "x", &Node::x, "y", &Node::y, "ox", &Node::ox, "oy", &Node::oy,
-    "sx", &Node::sx, "sy", &Node::sy, "r", &Node::r, "kx", &Node::kx, "ky", &Node::ky,
     "add", [](Node& self, sol::variadic_args va) {
       for (auto v : va) {
         Node node = v;
