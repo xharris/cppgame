@@ -63,7 +63,11 @@
     "thread": "cpp",
     "variant": "cpp",
     "csignal": "cpp",
-    "cerrno": "cpp"
+    "cerrno": "cpp",
+    "any": "cpp",
+    "scoped_allocator": "cpp",
+    "shared_mutex": "cpp",
+    "bit": "cpp"
   },
   "cmake.configureOnOpen": true
 }

@@ -57,7 +57,6 @@ struct GraphicsState {
 class GraphicsStack {
   public:
   GraphicsStack();
-  ~GraphicsStack();
   GraphicsState* current;
   void push();
   void pop();
@@ -65,6 +64,31 @@ class GraphicsStack {
 
   private:
   std::stack<GraphicsState> stack;
+};
+
+class Canvas {
+  public:
+  Canvas();
+  Canvas(int w, int h);
+  ~Canvas();
+  void begin();
+  void end();
+  
+  void clear();
+  void clear(Color c);
+
+  // text
+
+  void text(const char *text);
+  void text(const char *text, int x, int y);
+  void text(const char *text, float x, float y, float w, float h);  
+
+  // primitives
+
+  void circle(int x, int y, float r);
+
+  private:
+  RenderTexture2D tex;
 };
 
 // color 
@@ -102,17 +126,13 @@ void fill(Color c);
 void stroke();
 void stroke(Color c);
 
-// text
+// transform 2D
 
-void text(const char *text);
-void text(const char *text, int x, int y);
-void text(const char *text, int x, int y, int w, int h);
+void translate(float x, float y);
+void rotate(float r);
+void scale(float x, float y);
 
 void font(sol::table f);
-
-// primitives
-
-void circle(int x, int y, float r);
 
 // image
 

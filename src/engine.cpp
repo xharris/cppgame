@@ -33,19 +33,35 @@ bool Engine::call(sol::state& lua, const char* fn_name)
 
 void Engine::initLua(sol::state& lua)
 {
-  lua.open_libraries(sol::lib::base, sol::lib::package);
+  lua.open_libraries(
+    sol::lib::base,
+    sol::lib::package, 
+    sol::lib::coroutine,
+    sol::lib::string,
+    sol::lib::os,
+    sol::lib::math,
+    sol::lib::table,
+    sol::lib::debug,
+    sol::lib::bit32,
+    sol::lib::io,
+    sol::lib::ffi,
+    sol::lib::jit
+  );
 }
 
 bool Engine::bind(sol::state &lua)
 {
-  bind_ecs(lua);
+  // bind_ecs(lua);
   bind_graphics(lua);
   bind_window(lua);
+  bind_fs(lua);
+  
 
   lua.new_usertype<GameSetting>("GameSetting",
     "fps", sol::readonly(&GameSetting::fps),
     "width", sol::readonly(&GameSetting::width),
-    "height", sol::readonly(&GameSetting::height)
+    "height", sol::readonly(&GameSetting::height),
+    "quit", &GameSetting::quit
   );
   
   lua["window"] = &Engine::window;
@@ -83,7 +99,6 @@ void Engine::loop(sol::state& lua)
 {
   sol::function fn_update = lua["update"];
   sol::function fn_draw = lua["draw"];
-  // sol::function fn_system_draw = sol::as_function(&System::drawAll);
   
   while (!WindowShouldClose())
   {
@@ -93,20 +108,19 @@ void Engine::loop(sol::state& lua)
       auto ru = fn_update(GetFrameTime());
       Error::check(ru);
     }
-    // update ecs systems
-    System::updateAll(GetFrameTime());
 
     // fixed timestep (physac automatically does this)
     // ...
 
     BeginDrawing();
-    ClearBackground(Engine::game.background);
+    rlPushMatrix();
+    clear();
     if (fn_draw.valid())
     {
       auto rd = fn_draw();
       Error::check(rd);
     }
-    System::drawAll();
+    rlPopMatrix();
     EndDrawing();
   }
 

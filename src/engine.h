@@ -9,8 +9,8 @@
 #include "uuid.h"
 #include "graphics.h"
 #include "window.h"
-#include "ecs_graph.h"
 #include "error.h"
+#include "fs.h"
 
 struct GameSetting
 {
@@ -29,6 +29,11 @@ struct GameSetting
 
     SetTargetFPS(fps);
   };
+
+  void quit()
+  {
+    CloseWindow();
+  }
 };
 
 class GraphicsStack;

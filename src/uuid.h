@@ -7,7 +7,7 @@ namespace uuid
 
   namespace 
   {
-    uuid next_id = 0;
+    uuid next_id = 1;
   }
 
   static uuid generate()

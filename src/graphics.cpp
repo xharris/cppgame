@@ -2,30 +2,83 @@
 
 GraphicsStack::GraphicsStack()
 {
-  stack.push(GraphicsState());
+  if (stack.size() > 0)
+    stack.push(stack.top()); 
+  else 
+    stack.push(GraphicsState());
   current = &stack.top();
-}
-GraphicsStack::~GraphicsStack()
-{
-  delete current;
 }
 // push a copy of the current state on the stack
 void GraphicsStack::push() 
 { 
-  stack.push(stack.top()); 
+  if (stack.size() > 0)
+    stack.push(stack.top()); 
+  else 
+    stack.push(GraphicsState());
+  rlPushMatrix();
   current = &stack.top();
 }
 void GraphicsStack::pop() 
 {
   if (stack.size() > 1)
     stack.pop();
+  rlPopMatrix();
   current = &stack.top();
 }
 void GraphicsStack::reset()
 {
-  while (!stack.empty()) stack.pop();
+  while (!stack.empty())
+    stack.pop();
+  rlLoadIdentity();
   stack.push(GraphicsState{});
   current = &stack.top();
+}
+
+Canvas::Canvas()
+{
+  tex = LoadRenderTexture(Engine::game.width, Engine::game.height);
+}
+Canvas::Canvas(int w, int h)
+{
+  tex = LoadRenderTexture(w, h);
+}
+Canvas::~Canvas()
+{
+  UnloadRenderTexture(tex);
+}
+void Canvas::begin()
+{
+  BeginTextureMode(tex);
+}
+void Canvas::end()
+{
+  EndTextureMode();
+}
+void Canvas::clear()
+{
+  ClearBackground(Engine::game.background);
+}
+void Canvas::clear(Color c)
+{
+  ClearBackground(c);
+}
+void Canvas::text(const char *text)
+{
+  DrawText(text, 0, 0, Engine::game.font_size, Engine::graphics.current->fill);
+}
+void Canvas::text(const char *text, int x, int y)
+{
+  DrawText(text, x, y, Engine::game.font_size, Engine::graphics.current->fill);
+}
+void Canvas::text(const char *text, float x, float y, float w, float h)
+{
+  DrawTextRec(GetFontDefault(), text, Rectangle{x,y,w,h}, Engine::game.font_size, Engine::game.font_spacing, Engine::game.font_wrap, Engine::graphics.current->fill);
+}
+void Canvas::circle(int x, int y, float r)
+{
+  DrawCircle(x, y, r, Engine::graphics.current->fill);
+  if (Engine::graphics.current->stroke != blank) 
+    DrawCircleLines(x, y, r, Engine::graphics.current->stroke);
 }
 
 Color rgb(int r, int g, int b)
@@ -70,18 +123,20 @@ void fill(Color c) { Engine::graphics.current->fill = c; }
 void stroke() { Engine::graphics.current->stroke = blank; }
 void stroke(Color c) { Engine::graphics.current->stroke = c; }
 
-void text(const char *text)
+
+void translate(float x, float y)
 {
-  DrawText(text, 0, 0, Engine::game.font_size, Engine::graphics.current->fill);
+  rlTranslatef(x, y, 0);
 }
-void text(const char *text, int x, int y)
+void rotate(float r)
 {
-  DrawText(text, x, y, Engine::game.font_size, Engine::graphics.current->fill);
+  rlRotatef(r, 1.f, 0.f, 0.f);
 }
-void text(const char *text, float x, float y, float w, float h)
+void scale(float x, float y)
 {
-  DrawTextRec(GetFontDefault(), text, Rectangle{x,y,w,h}, Engine::game.font_size, Engine::game.font_spacing, Engine::game.font_wrap, Engine::graphics.current->fill);
+  rlScalef(x, y, 1.f);
 }
+
 
 void font(sol::table f)
 {
@@ -90,12 +145,6 @@ void font(sol::table f)
   Engine::game.font_wrap = f["wrap"].get_or(Engine::game.font_wrap);
 }
 
-void circle(int x, int y, float r)
-{
-  DrawCircle(x, y, r, Engine::graphics.current->fill);
-  if (Engine::graphics.current->stroke != blank) 
-    DrawCircleLines(x, y, r, Engine::graphics.current->stroke);
-}
 
 BImage::BImage(const char* filename)
 {
@@ -147,11 +196,15 @@ BImage* BImage::sprite(const char * name, sol::table frames, int framew, int fra
 
 void bind_graphics(sol::state& lua)
 {
-  lua.set_function("push", &GraphicsStack::push, &Engine::graphics);
-  lua.set_function("pop", &GraphicsStack::pop, &Engine::graphics);
-  lua.set_function("reset", &GraphicsStack::reset, &Engine::graphics);
-
-  // color
+  lua.new_usertype<Canvas>("Canvas",
+    sol::constructors<Canvas(), Canvas(int, int)>(),
+    "text", sol::overload(
+      sol::resolve<void(const char*)>(&Canvas::text), 
+      sol::resolve<void(const char*, int, int)>(&Canvas::text), 
+      sol::resolve<void(const char*, float, float, float, float)>(&Canvas::text)
+    ),
+    "circle", &Canvas::circle
+  );
 
   lua.new_usertype<Color>("Color",
     "r", &Color::r,
@@ -169,22 +222,24 @@ void bind_graphics(sol::state& lua)
   const char *color_names[] = COLOR_STRINGS;
 
   std::string str_color;
+  sol::table color = lua.create_table();
   for (int c = 0; c < NUM_COLORS; c++) // lol!
   {
     for (int shade = 0; shade < NUM_SHADES; shade++)
     {
       str_color = color_names[c];
       str_color += std::to_string(shade == 0 ? 50 : shade * 100);
-      lua[str_color.c_str()] = colors[c * NUM_SHADES + shade];
+      color[str_color.c_str()] = colors[c * NUM_SHADES + shade];
       
       if (shade == NUM_SHADES / 2)
-        lua[color_names[c]] = colors[c * NUM_SHADES + shade];
+        color[color_names[c]] = colors[c * NUM_SHADES + shade];
     }
   }
   
-  lua["white"] = white;
-  lua["black"] = black;
-  lua["blank"] = blank;
+  color["white"] = white;
+  color["black"] = black;
+  color["blank"] = blank;
+  lua["color"] = color;
 
   lua.set_function("rgb", sol::overload(
     sol::resolve<Color(int,int,int)>(rgb),
@@ -204,19 +259,14 @@ void bind_graphics(sol::state& lua)
     sol::resolve<void()>(stroke),
     sol::resolve<void(Color)>(stroke)
   ));
-
-  // text 
-  
-  lua.set_function("text", sol::overload(
-    sol::resolve<void(const char*)>(text), 
-    sol::resolve<void(const char*, int, int)>(text), 
-    sol::resolve<void(const char*, float, float, float, float)>(text)
-  ));
   lua.set_function("font", font);
 
-  // primitives
-
-  lua.set_function("circle", circle);
+  lua.set_function("translate", translate);
+  lua.set_function("rotate", rotate);
+  lua.set_function("scale", scale);
+  lua.set_function("push", &GraphicsStack::push, &Engine::graphics);
+  lua.set_function("pop", &GraphicsStack::pop, &Engine::graphics);
+  lua.set_function("reset", &GraphicsStack::reset, &Engine::graphics);
 
   // image 
 
@@ -230,3 +280,4 @@ void bind_graphics(sol::state& lua)
   img_type.set_function("sprite", &BImage::sprite);
   // img_type["sprite"] = &BImage::sprite;
 }
+

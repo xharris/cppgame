@@ -17,4 +17,3 @@ build
 CMakeLists.txt.user*
 CPackConfig.cmake
 CPackSourceConfig.cmake
-

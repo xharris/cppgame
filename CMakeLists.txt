@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
+# cmake_policy(SET CMP0076 NEW)
 project(cpp_game LANGUAGES CXX)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(EXTERNAL_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/external)
@@ -6,6 +7,8 @@ set(PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(SRC_DIR ${PROJECT_DIR}/src)
 set(TEST_DIR ${PROJECT_DIR}/test)
 set(LIBS_DIR ${PROJECT_DIR}/libs)
+
+set(CMAKE_BUILD_TYPE Debug)
 
 file(TO_NATIVE_PATH "{SRC_DIR}" ${SRC_DIR})
 
@@ -49,13 +52,17 @@ find_package(raylib REQUIRED)
 add_subdirectory(external/lua)
 # sol2
 find_package(sol2 REQUIRED)
+# parallel-hashmap
+# find_package(phmap REQUIRED)
+# entt
+find_package(entt REQUIRED)
 # doctest
 find_package(doctest REQUIRED)
 
 include_directories(${EXTERNAL_INSTALL_LOCATION}/include)
 link_directories(${EXTERNAL_INSTALL_LOCATION}/lib)
 
-set(LIBS lua::lib sol2::sol2 raylib)
+set(LIBS lua::lib sol2::sol2 raylib EnTT::EnTT)
 set(TESTING_LIB doctest)
 
 # output dirs
@@ -78,7 +85,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${SRC_DIR})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${LIBS})
 # -- test
 add_executable(${PROJECT_NAME}_test  ${TEST_SRC_CPP})
-target_include_directories(${PROJECT_NAME}_test PRIVATE ${SRC_DIR} ${PROJECT_DIR}/tests)
+target_include_directories(${PROJECT_NAME}_test PRIVATE ${SRC_DIR} ${PROJECT_DIR}/test)
 target_link_libraries(${PROJECT_NAME}_test PRIVATE ${TESTING_LIB} ${LIBS})
 
 # Raylib: Checks if OSX and links appropriate frameworks (Only required on MacOS)
